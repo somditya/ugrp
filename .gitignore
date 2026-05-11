@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+pnpm-lock.yaml
+
+# next.js
+.next/
+out/
+
+# build
+build
+dist
+
+# env
+.env
+.env.local
+.env*.local
+.env.production
+
+# debug
+npm-debug.log*
+
+# misc
+.DS_Store
+*.tgz
+
+# prisma
+prisma/migrations
+!prisma/migrations/
+prisma/*.db*
+prisma/*.sqlite
+
+# upload
+uploads/
+
+# IDE
+.vscode
+.idea
+
+# test coverage
+coverage/

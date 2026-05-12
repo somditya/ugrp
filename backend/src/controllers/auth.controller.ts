@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '@database/prisma/client';
+import { Role } from '@prisma/client';
 import { hashPassword, verifyPassword } from '@utils/hash';
 import { signToken } from '@utils/jwt';
-import { toSafeUser } from '@interfaces/UserInterface';
+import { toSafeUser } from '@types';
 import { ApiResponse } from '@types';
 
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
-    const { email, password, name } = req.body;
+    const { universityId, email, password, name, role, departmentId } = req.body;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -16,12 +17,19 @@ export async function register(req: Request, res: Response, next: NextFunction) 
       return next(err);
     }
 
+    const uniExisting = await prisma.user.findUnique({ where: { universityId } });
+    if (uniExisting) {
+      const err = new Error('University ID already registered') as any;
+      err.status = 409;
+      return next(err);
+    }
+
     const passwordHash = await hashPassword(password);
     const user = await prisma.user.create({
-      data: { email, name, passwordHash },
+      data: { universityId, email, name, role: role as Role, passwordHash, departmentId },
     });
 
-    const token = signToken({ userId: user.id, role: user.role });
+    const token = signToken({ userId: user.id, role: user.role, departmentId: user.departmentId });
 
     res.status(201).json({
       success: true,
@@ -43,7 +51,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       return next(err);
     }
 
-    const token = signToken({ userId: user.id, role: user.role });
+    const token = signToken({ userId: user.id, role: user.role, departmentId: user.departmentId });
 
     res.json({
       success: true,
@@ -68,6 +76,7 @@ export async function me(req: Request & { user?: any }, res: Response, next: Nex
 
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
+      include: { department: { select: { id: true, name: true, code: true } } },
     });
 
     if (!user) {
@@ -76,10 +85,7 @@ export async function me(req: Request & { user?: any }, res: Response, next: Nex
       return next(err);
     }
 
-    res.json({
-      success: true,
-      data: { user: toSafeUser(user) },
-    });
+    res.json({ success: true, data: { user: toSafeUser(user) } });
   } catch (err) {
     next(err);
   }

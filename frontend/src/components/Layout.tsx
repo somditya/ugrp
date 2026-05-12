@@ -14,8 +14,11 @@ export default function Layout({ children }: Props) {
               UGRP
             </Link>
             <div className="flex gap-4">
-              <Link href="/posts" className="text-gray-600 hover:text-gray-900">
-                Posts
+              <Link href="/grievances" className="text-gray-600 hover:text-gray-900">
+                Grievances
+              </Link>
+              <Link href="/departments" className="text-gray-600 hover:text-gray-900">
+                Departments
               </Link>
               <Link href="/api/health" className="text-gray-600 hover:text-gray-900">
                 API
@@ -26,7 +29,7 @@ export default function Layout({ children }: Props) {
       </nav>
       <main className="flex-1">{children}</main>
       <footer className="bg-gray-100 py-4 text-center text-sm text-gray-500">
-        &copy; {new Date().getFullYear()} UGRP
+        &copy; {new Date().getFullYear()} UGRP Grievance Management System
       </footer>
     </div>
   );

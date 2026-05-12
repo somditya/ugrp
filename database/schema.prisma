@@ -1,0 +1,253 @@
+// =============================================================================
+// UGRP Grievance Management System — Prisma Schema
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  STUDENT
+  TEACHING
+  NON_TEACHING
+  COMMITTEE
+  ADMIN
+  REGISTRAR
+  HOD
+}
+
+enum StakeholderType {
+  STUDENT
+  TEACHING
+  NON_TEACHING
+  HEI
+  ALL
+}
+
+enum GrievanceStatus {
+  SUBMITTED
+  ACKNOWLEDGED
+  UNDER_REVIEW
+  CLARIFICATION_REQUESTED
+  DELEGATED
+  ACTION_TAKEN
+  RESOLVED
+  APPEALED
+  CLOSED
+  SLA_BREACHED
+}
+
+enum PriorityFlag {
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  IN_APP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  universityId    String    @unique @map("university_id")
+  role            Role
+  name            String
+  departmentId    String?   @db.Uuid
+  department      Department? @relation(fields: [departmentId], references: [id])
+  email           String    @unique
+  mobile          String?
+  isActive        Boolean   @default(true) @map("is_active")
+  passwordHash    String    @map("password_hash")
+  avatarUrl       String?   @map("avatar_url")
+  emailVerified   DateTime? @map("email_verified")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  departmentHod       Department[]         @relation("HodToDepartment")
+  grievances          Grievance[]
+  grievanceTimeline   GrievanceTimeline[]
+  messages            Message[]
+  workflowRules       WorkflowRule[]
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+
+  @@map("users")
+}
+
+model Department {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  code        String    @unique
+  hodId       String?   @db.Uuid @map("hod_id")
+  hod         User?     @relation("HodToDepartment", fields: [hodId], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  grievances  Grievance[]
+  users       User[]
+
+  @@map("departments")
+}
+
+model GrievanceCategory {
+  id                  String           @id @default(uuid()) @db.Uuid
+  name                String
+  slug                String           @unique
+  parentId            String?          @db.Uuid @map("parent_id")
+  parent              GrievanceCategory? @relation("CategorySelfRelation", fields: [parentId], references: [id])
+  children            GrievanceCategory[] @relation("CategorySelfRelation")
+  stakeholderType     StakeholderType  @map("stakeholder_type")
+  slaWorkingDays      Int              @default(7) @map("sla_working_days")
+  isPriorityCritical  Boolean          @default(false) @map("is_priority_critical")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  grievances    Grievance[]
+  workflowRules WorkflowRule[]
+
+  @@map("grievance_categories")
+}
+
+model Grievance {
+  id                  String            @id @default(uuid()) @db.Uuid
+  grievanceId         String            @unique @map("grievance_id")
+  complainantId       String?           @db.Uuid @map("complainant_id")
+  complainant         User?             @relation(fields: [complainantId], references: [id])
+  categoryId          String            @db.Uuid @map("category_id")
+  category            GrievanceCategory @relation(fields: [categoryId], references: [id])
+  departmentId        String            @db.Uuid @map("department_id")
+  department          Department        @relation(fields: [departmentId], references: [id])
+  description         String            @db.Text
+  status              GrievanceStatus   @default(SUBMITTED)
+  isAnonymous         Boolean           @default(false) @map("is_anonymous")
+  priorityFlag        PriorityFlag      @default(NORMAL) @map("priority_flag")
+  slaDeadline         DateTime          @map("sla_deadline")
+  resolvedAt          DateTime?         @map("resolved_at")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  timeline    GrievanceTimeline[]
+  messages    Message[]
+  attachments Attachment[]
+  notifications Notification[]
+
+  // Indexes
+  @@index([grievanceId])
+  @@index([status])
+  @@index([complainantId])
+  @@index([slaDeadline])
+  @@map("grievances")
+}
+
+model GrievanceTimeline {
+  id           String        @id @default(uuid()) @db.Uuid
+  grievanceId  String        @db.Uuid @map("grievance_id")
+  grievance    Grievance     @relation(fields: [grievanceId], references: [id], onDelete: Cascade)
+  status       GrievanceStatus
+  note         String?       @db.Text
+  actorId      String?       @db.Uuid @map("actor_id")
+  actor        User?         @relation(fields: [actorId], references: [id])
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  @@index([grievanceId])
+  @@map("grievance_timelines")
+}
+
+model Message {
+  id           String    @id @default(uuid()) @db.Uuid
+  grievanceId  String    @db.Uuid @map("grievance_id")
+  grievance    Grievance @relation(fields: [grievanceId], references: [id], onDelete: Cascade)
+  senderId     String    @db.Uuid @map("sender_id")
+  sender       User      @relation(fields: [senderId], references: [id])
+  body         String    @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([grievanceId])
+  @@map("messages")
+}
+
+model WorkflowRule {
+  id                String          @id @default(uuid()) @db.Uuid
+  categoryId        String?         @db.Uuid @map("category_id")
+  category          GrievanceCategory? @relation(fields: [categoryId], references: [id])
+  stakeholderType   StakeholderType @map("stakeholder_type")
+  responderRole     Role            @map("responder_role")
+  responderId       String?         @db.Uuid @map("responder_id")
+  responder         User?           @relation(fields: [responderId], references: [id])
+  slaOverrideDays   Int?            @map("sla_override_days")
+  isActive          Boolean         @default(true) @map("is_active")
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  @@map("workflow_rules")
+}
+
+model Attachment {
+  id           String   @id @default(uuid()) @db.Uuid
+  grievanceId  String   @db.Uuid @map("grievance_id")
+  grievance    Grievance @relation(fields: [grievanceId], references: [id], onDelete: Cascade)
+  filename     String
+  storagePath  String   @map("storage_path")
+  mimeType     String   @map("mime_type")
+  size         Int      // bytes
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([grievanceId])
+  @@map("attachments")
+}
+
+model Notification {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @db.Uuid @map("user_id")
+  user         User             @relation(fields: [userId], references: [id])
+  grievanceId  String?          @db.Uuid @map("grievance_id")
+  grievance    Grievance?       @relation(fields: [grievanceId], references: [id])
+  type         String
+  channel      NotificationChannel
+  status       NotificationStatus @default(PENDING)
+  sentAt       DateTime?        @map("sent_at")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([grievanceId])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  actorId      String?   @db.Uuid @map("actor_id")
+  actor        User?     @relation(fields: [actorId], references: [id])
+  action       String
+  targetTable  String    @map("target_table")
+  targetId     String    @map("target_id")
+  metadata     Json?
+  ipAddress    String    @map("ip_address")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}

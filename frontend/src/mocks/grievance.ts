@@ -1,0 +1,73 @@
+import { Grievance, GrievanceStatus, PriorityFlag } from '@/types';
+
+export const mockGrievance: Grievance = {
+  id: 'mock-id-1',
+  grievanceId: 'UGRP-2026-CSE-00142',
+  complainantId: 'mock-complainant-id',
+  complainant: {
+    id: 'mock-complainant-id',
+    universityId: 'UGRP-STU-0001',
+    role: 'STUDENT',
+    name: 'Amit Patel',
+    departmentId: 'mock-dept-id',
+    email: 'student@example.com',
+    mobile: null,
+    isActive: true,
+    emailVerified: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  categoryId: 'mock-cat-id',
+  category: {
+    id: 'mock-cat-id',
+    name: 'Faculty Conduct',
+    slug: 'faculty-conduct',
+    parentId: null,
+    stakeholderType: 'STUDENT',
+    slaWorkingDays: 14,
+    isPriorityCritical: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  departmentId: 'mock-dept-id',
+  department: {
+    id: 'mock-dept-id',
+    name: 'Computer Science & Engineering',
+    code: 'CSE',
+    hodId: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  description: 'Faculty member consistently arrives late for lectures.',
+  status: 'UNDER_REVIEW',
+  isAnonymous: false,
+  priorityFlag: 'HIGH',
+  slaDeadline: new Date(Date.now() + 14 * 86400000).toISOString(),
+  resolvedAt: null,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+export const mockGrievances: Grievance[] = [
+  {
+    ...mockGrievance,
+    id: '1',
+    grievanceId: 'UGRP-2026-CSE-00142',
+    status: GrievanceStatus.UNDER_REVIEW,
+    priorityFlag: PriorityFlag.HIGH,
+  },
+  {
+    ...mockGrievance,
+    id: '2',
+    grievanceId: 'UGRP-2026-ECE-00087',
+    status: GrievanceStatus.ACKNOWLEDGED,
+    priorityFlag: PriorityFlag.CRITICAL,
+  },
+  {
+    ...mockGrievance,
+    id: '3',
+    grievanceId: 'UGRP-2026-HSS-00031',
+    status: GrievanceStatus.RESOLVED,
+    priorityFlag: PriorityFlag.NORMAL,
+  },
+];

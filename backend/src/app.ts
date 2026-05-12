@@ -3,13 +3,17 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { connectRedis } from './utils/redis';
-import { errorHandler } from './middleware/errorHandler';
-import { notFoundHandler } from './middleware/notFoundHandler';
-import { healthRouter } from './routes/health.routes';
-import { authRouter } from './routes/auth.routes';
-import { postRouter } from './routes/post.routes';
-import { logger } from './utils/logger';
+import { connectRedis } from '@utils/redis';
+import { errorHandler } from '@middleware/errorHandler';
+import { notFoundHandler } from '@middleware/notFoundHandler';
+import { healthRouter } from '@routes/health.routes';
+import { authRouter } from '@routes/auth.routes';
+import { grievanceRouter } from '@routes/grievance.routes';
+import { departmentRouter } from '@routes/department.routes';
+import { categoryRouter } from '@routes/category.routes';
+import { messageRouter } from '@routes/message.routes';
+import { notificationRouter } from '@routes/notification.routes';
+import { logger } from '@utils/logger';
 
 dotenv.config();
 
@@ -34,7 +38,11 @@ app.use('/api/', limiter);
 // --- Routes ---
 app.use('/api/health', healthRouter);
 app.use('/api/auth', authRouter);
-app.use('/api/posts', postRouter);
+app.use('/api/grievances', grievanceRouter);
+app.use('/api/departments', departmentRouter);
+app.use('/api/categories', categoryRouter);
+app.use('/api/messages', messageRouter);
+app.use('/api/notifications', notificationRouter);
 
 // --- Error handling ---
 app.use(notFoundHandler);

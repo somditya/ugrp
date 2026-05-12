@@ -1,23 +1,14 @@
 import { User, Role } from '@prisma/client';
 
-export interface SafeUser {
-  id: string;
-  email: string;
-  name: string | null;
-  role: Role;
-  avatarUrl: string | null;
-  emailVerified: Date | null;
-  createdAt: Date;
-}
-
-export function toSafeUser(user: User): SafeUser {
+export function toSafeUser(user: User) {
   return {
     id: user.id,
-    email: user.email,
-    name: user.name,
+    universityId: user.universityId,
     role: user.role,
-    avatarUrl: user.avatarUrl,
-    emailVerified: user.emailVerified,
-    createdAt: user.createdAt,
+    name: user.name,
+    departmentId: user.departmentId,
+    email: user.email,
+    mobile: user.mobile,
+    isActive: user.isActive,
   };
 }

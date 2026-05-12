@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'UGRP',
-  description: 'Full-stack monorepo application',
+  title: 'UGRP — Grievance Management',
+  description: 'University Grievance Redressal Portal',
 };
 
 export default function RootLayout({

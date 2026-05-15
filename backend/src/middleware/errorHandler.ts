@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 
 export function errorHandler(
-  err: Error & { status?: number },
+  err: Error & { status?: number; code?: string; details?: any },
   _req: Request,
   res: Response,
   _next: NextFunction
@@ -13,8 +13,9 @@ export function errorHandler(
   logger.error(`${status} — ${err.message}`, { stack: err.stack });
 
   res.status(status).json({
-    success: false,
     error: message,
+    ...(err.code && { code: err.code }),
+    ...(err.details && { details: err.details }),
     ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
   });
 }

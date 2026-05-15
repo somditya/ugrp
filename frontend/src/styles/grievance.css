@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.bg-paper-texture {
+  background: linear-gradient(135deg, #f9f5ee 0%, #f3efe6 100%);
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(255,255,255,0.8) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(0,0,0,0.02) 0%, transparent 20%);
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.font-serif {
+  font-family: 'Merriweather', Georgia, 'Times New Roman', serif;
+}

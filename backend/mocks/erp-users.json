@@ -1,0 +1,16 @@
+{
+  "CSE2024001": { "universityId": "CSE2024001", "name": "Amit Patel", "role": "STUDENT", "department": "CSE", "email": "student1@ugrp.dev", "mobile": "9876543210" },
+  "ECE2024002": { "universityId": "ECE2024002", "name": "Sneha Reddy", "role": "STUDENT", "department": "ECE", "email": "student2@ugrp.dev", "mobile": "9876543211" },
+  "MECH2024003": { "universityId": "MECH2024003", "name": "Rohit Singh", "role": "STUDENT", "department": "MECH", "email": "student3@ugrp.dev", "mobile": "9876543212" },
+  "HSS2024004": { "universityId": "HSS2024004", "name": "Meera Joshi", "role": "STUDENT", "department": "HSS", "email": "student4@ugrp.dev", "mobile": "9876543213" },
+  "MBA2024005": { "universityId": "MBA2024005", "name": "Karan Verma", "role": "STUDENT", "department": "MBA", "email": "student5@ugrp.dev", "mobile": "9876543214" },
+  "FAC2023001": { "universityId": "FAC2023001", "name": "Dr. Priya Sharma", "role": "TEACHING", "department": "CSE", "email": "faculty1@ugrp.dev", "mobile": "9876543220" },
+  "HOD2023001": { "universityId": "HOD2023001", "name": "Prof. Arun Nair", "role": "HOD", "department": "CSE", "email": "hod.cse@ugrp.dev", "mobile": "9876543230" },
+  "HOD2023002": { "universityId": "HOD2023002", "name": "Prof. Deepa Rani", "role": "HOD", "department": "ECE", "email": "hod.ece@ugrp.dev", "mobile": "9876543231" },
+  "COM2023001": { "universityId": "COM2023001", "name": "Dr. Ramesh Gupta", "role": "COMMITTEE", "department": "CSE", "email": "chairman@ugrp.dev", "mobile": "9876543240" },
+  "COM2023002": { "universityId": "COM2023002", "name": "Prof. Ananya Mehta", "role": "COMMITTEE", "department": "HSS", "email": "member1@ugrp.dev", "mobile": "9876543241" },
+  "COM2023003": { "universityId": "COM2023003", "name": "Dr. Suresh Kumar", "role": "COMMITTEE", "department": "ECE", "email": "member2@ugrp.dev", "mobile": "9876543242" },
+  "ADM2022001": { "universityId": "ADM2022001", "name": "System Administrator", "role": "ADMIN", "department": "CSE", "email": "admin@ugrp.dev", "mobile": "9876543250" },
+  "REG2022001": { "universityId": "REG2022001", "name": "Registrar Office", "role": "REGISTRAR", "department": "HSS", "email": "registrar@ugrp.dev", "mobile": "9876543260" },
+  "NTL2023055": { "universityId": "NTL2023055", "name": "Gaurav Mehta", "role": "NON_TEACHING", "department": "MECH", "email": "staff1@ugrp.dev", "mobile": "9876543270" }
+}

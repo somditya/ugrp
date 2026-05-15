@@ -1,13 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '@database/prisma/client';
 import { ApiResponse } from '@types';
+import { StakeholderType } from '@prisma/client';
 
-export async function getCategories(_req: Request, res: Response, next: NextFunction) {
+export async function getCategories(req: Request, res: Response, next: NextFunction) {
   try {
+    const stakeholderType = req.query.stakeholderType as StakeholderType | undefined;
+
+    const where = stakeholderType ? { stakeholderType } : {};
+
     const categories = await prisma.grievanceCategory.findMany({
+      where,
       orderBy: { name: 'asc' },
+      include: {
+        children: {
+          orderBy: { name: 'asc' },
+        },
+      },
     });
-    res.json({ success: true, data: categories } as ApiResponse);
+
+    const tree = categories.filter((c) => !c.parentId);
+    res.json({ success: true, data: tree } as ApiResponse);
   } catch (err) {
     next(err);
   }

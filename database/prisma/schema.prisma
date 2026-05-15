@@ -65,6 +65,13 @@ enum NotificationStatus {
   FAILED
 }
 
+enum ResponderRole {
+  COMMITTEE
+  HOD
+  REGISTRAR
+  ADMIN
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -87,9 +94,10 @@ model User {
 
   // Relations
   departmentHod       Department[]         @relation("HodToDepartment")
-  grievances          Grievance[]
-  grievanceTimeline   GrievanceTimeline[]
-  messages            Message[]
+  grievancesFiled     Grievance[]          @relation("Complainant")
+  grievancesAssigned  Grievance[]          @relation("Responder")
+  timelineActions     GrievanceTimeline[]
+  messagesSent        Message[]
   workflowRules       WorkflowRule[]
   notifications       Notification[]
   auditLogs           AuditLog[]
@@ -109,6 +117,7 @@ model Department {
   // Relations
   grievances  Grievance[]
   users       User[]
+  categories  GrievanceCategory[]
 
   @@map("departments")
 }
@@ -137,7 +146,7 @@ model Grievance {
   id                  String            @id @default(uuid()) @db.Uuid
   grievanceId         String            @unique @map("grievance_id")
   complainantId       String?           @db.Uuid @map("complainant_id")
-  complainant         User?             @relation(fields: [complainantId], references: [id])
+  complainant         User?             @relation("Complainant", fields: [complainantId], references: [id])
   categoryId          String            @db.Uuid @map("category_id")
   category            GrievanceCategory @relation(fields: [categoryId], references: [id])
   departmentId        String            @db.Uuid @map("department_id")
@@ -148,6 +157,8 @@ model Grievance {
   priorityFlag        PriorityFlag      @default(NORMAL) @map("priority_flag")
   slaDeadline         DateTime          @map("sla_deadline")
   resolvedAt          DateTime?         @map("resolved_at")
+  responderId         String?           @db.Uuid @map("responder_id")
+  responder           User?             @relation("Responder", fields: [responderId], references: [id])
   createdAt           DateTime          @default(now()) @map("created_at")
   updatedAt           DateTime          @updatedAt @map("updated_at")
 
@@ -156,12 +167,15 @@ model Grievance {
   messages    Message[]
   attachments Attachment[]
   notifications Notification[]
+  feedback    GrievanceFeedback?
 
   // Indexes
   @@index([grievanceId])
   @@index([status])
   @@index([complainantId])
   @@index([slaDeadline])
+  @@index([priorityFlag])
+  @@index([departmentId])
   @@map("grievances")
 }
 
@@ -171,6 +185,7 @@ model GrievanceTimeline {
   grievance    Grievance     @relation(fields: [grievanceId], references: [id], onDelete: Cascade)
   status       GrievanceStatus
   note         String?       @db.Text
+  isInternal   Boolean       @default(false) @map("is_internal")
   actorId      String?       @db.Uuid @map("actor_id")
   actor        User?         @relation(fields: [actorId], references: [id])
   createdAt    DateTime      @default(now()) @map("created_at")
@@ -196,14 +211,17 @@ model WorkflowRule {
   id                String          @id @default(uuid()) @db.Uuid
   categoryId        String?         @db.Uuid @map("category_id")
   category          GrievanceCategory? @relation(fields: [categoryId], references: [id])
-  stakeholderType   StakeholderType @map("stakeholder_type")
-  responderRole     Role            @map("responder_role")
+  stakeholderType   StakeholderType @default(ALL) @map("stakeholder_type")
+  responderRole     ResponderRole   @default(COMMITTEE) @map("responder_role")
   responderId       String?         @db.Uuid @map("responder_id")
   responder         User?           @relation(fields: [responderId], references: [id])
   slaOverrideDays   Int?            @map("sla_override_days")
   isActive          Boolean         @default(true) @map("is_active")
   createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
+  @@index([categoryId, stakeholderType])
+  @@index([isActive])
   @@map("workflow_rules")
 }
 
@@ -222,19 +240,19 @@ model Attachment {
 }
 
 model Notification {
-  id           String           @id @default(uuid()) @db.Uuid
-  userId       String           @db.Uuid @map("user_id")
-  user         User             @relation(fields: [userId], references: [id])
-  grievanceId  String?          @db.Uuid @map("grievance_id")
-  grievance    Grievance?       @relation(fields: [grievanceId], references: [id])
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @db.Uuid @map("user_id")
+  user         User               @relation(fields: [userId], references: [id])
+  grievanceId  String?              @db.Uuid @map("grievance_id")
+  grievance    Grievance?           @relation(fields: [grievanceId], references: [id])
   type         String
   channel      NotificationChannel
-  status       NotificationStatus @default(PENDING)
-  sentAt       DateTime?        @map("sent_at")
-  createdAt    DateTime         @default(now()) @map("created_at")
+  status       NotificationStatus  @default(PENDING)
+  sentAt       DateTime?           @map("sent_at")
+  isRead       Boolean             @default(false) @map("is_read")
+  createdAt    DateTime            @default(now()) @map("created_at")
 
-  @@index([userId])
-  @@index([grievanceId])
+  @@index([userId, isRead])
   @@map("notifications")
 }
 
@@ -245,9 +263,31 @@ model AuditLog {
   action       String
   targetTable  String    @map("target_table")
   targetId     String    @map("target_id")
-  metadata     Json?
-  ipAddress    String    @map("ip_address")
+  metadata     Json      @default("{}")
+  ipAddress    String?   @map("ip_address")
   createdAt    DateTime  @default(now()) @map("created_at")
 
+  @@index([targetTable, targetId])
+  @@index([actorId])
   @@map("audit_logs")
+}
+
+model HolidayCalendar {
+  id          String   @id @default(uuid()) @db.Uuid
+  date        DateTime @unique
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("holiday_calendar")
+}
+
+model GrievanceFeedback {
+  id          String   @id @default(uuid()) @db.Uuid
+  grievanceId String   @unique @db.Uuid @map("grievance_id")
+  grievance   Grievance @relation(fields: [grievanceId], references: [id])
+  rating      Int
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("grievance_feedback")
 }

@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '@database/prisma/client';
-import { GrievanceStatus, PriorityFlag } from '@prisma/client';
+import { GrievanceStatus, PriorityFlag, Role } from '@prisma/client';
 import { AuthRequest, ApiResponse } from '@types';
+import { generateGrievanceId } from '@utils/grievanceId';
+import { calculateSlaDeadline } from '@utils/slaCalculator';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -144,7 +146,7 @@ export async function getGrievanceById(req: Request, res: Response, next: NextFu
 
 export async function createGrievance(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { title, categoryId, departmentId, description, isAnonymous, priorityFlag } = req.body;
+    const { categoryId, departmentId, description, isAnonymous, priorityFlag } = req.body;
 
     if (!req.user) {
       const err = new Error('Unauthorized') as any;
@@ -161,30 +163,64 @@ export async function createGrievance(req: AuthRequest, res: Response, next: Nex
       return next(err);
     }
 
-    const slaDeadline = new Date();
-    slaDeadline.setDate(slaDeadline.getDate() + category.slaWorkingDays);
-
-    const grievanceId = generateGrievanceId(departmentId, new Date());
-
-    const grievance = await prisma.grievance.create({
-      data: {
-        grievanceId,
-        complainantId: isAnonymous ? null : req.user.id,
+    const workflowRule = await prisma.workflowRule.findFirst({
+      where: {
         categoryId,
-        departmentId,
-        description,
-        isAnonymous: isAnonymous ?? false,
-        priorityFlag: priorityFlag || PriorityFlag.NORMAL,
-        status: GrievanceStatus.SUBMITTED,
-        slaDeadline,
-      },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        department: { select: { id: true, name: true, code: true } },
+        stakeholderType: req.user.role === 'STUDENT' ? 'STUDENT' :
+                        req.user.role === 'TEACHING' ? 'TEACHING' :
+                        req.user.role === 'NON_TEACHING' ? 'NON_TEACHING' : 'ALL',
+        isActive: true,
       },
     });
 
-    res.status(201).json({ success: true, data: grievance } as ApiResponse);
+    let responderId = workflowRule?.responderId ?? null;
+    if (!responderId) {
+      const committeeMember = await prisma.user.findFirst({
+        where: { role: 'COMMITTEE', isActive: true },
+      });
+      responderId = committeeMember?.id ?? null;
+    }
+
+    const grievanceId = await generateGrievanceId(departmentId, new Date());
+    const slaDeadline = await calculateSlaDeadline(new Date(), category.slaWorkingDays);
+
+    const finalizedPriorityFlag = category.isPriorityCritical ? PriorityFlag.CRITICAL : priorityFlag || PriorityFlag.NORMAL;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const grievance = await tx.grievance.create({
+        data: {
+          grievanceId,
+          complainantId: isAnonymous ? null : req.user!.id,
+          categoryId,
+          departmentId,
+          description,
+          isAnonymous: isAnonymous ?? false,
+          priorityFlag: finalizedPriorityFlag,
+          status: GrievanceStatus.SUBMITTED,
+          slaDeadline,
+          responderId,
+        },
+      });
+
+      await tx.grievanceTimeline.create({
+        data: {
+          grievanceId: grievance.id,
+          status: GrievanceStatus.SUBMITTED,
+          note: isAnonymous ? 'Anonymous grievance submitted' : 'Grievance submitted',
+        },
+      });
+
+      return grievance;
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        grievanceId: result.grievanceId,
+        status: result.status,
+        slaDeadline: result.slaDeadline,
+      },
+    } as ApiResponse);
   } catch (err) {
     next(err);
   }
@@ -261,9 +297,72 @@ export async function getGrievanceMetrics(_req: Request, res: Response, next: Ne
   }
 }
 
-function generateGrievanceId(departmentCode: string, date: Date): string {
-  const year = date.getFullYear();
-  const deptCode = departmentCode.substring(0, 3).toUpperCase();
-  const seq = String(Math.floor(Math.random() * 99999)).padStart(5, '0');
-  return 'UGRP-' + year + '-' + deptCode + '-' + seq;
+export async function uploadAttachments(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      const err = new Error('Unauthorized') as any;
+      err.status = 401;
+      return next(err);
+    }
+
+    const { id } = req.params;
+    const grievance = await prisma.grievance.findUnique({
+      where: { id },
+    });
+
+    if (!grievance) {
+      const err = new Error('Grievance not found') as any;
+      err.status = 404;
+      return next(err);
+    }
+
+    if (grievance.complainantId !== req.user.id && req.user.role !== 'COMMITTEE' && req.user.role !== 'ADMIN') {
+      const err = new Error('Not authorized to add attachments') as any;
+      err.status = 403;
+      return next(err);
+    }
+
+    const files = req.files as Express.Multer.File[] | undefined;
+
+    if (!files || files.length === 0) {
+      const err = new Error('No files uploaded') as any;
+      err.status = 400;
+      return next(err);
+    }
+
+    const attachmentCount = await prisma.attachment.count({
+      where: { grievanceId: id },
+    });
+
+    if (attachmentCount + files.length > 5) {
+      const err = new Error('Maximum 5 attachments allowed per grievance') as any;
+      err.status = 400;
+      return next(err);
+    }
+
+    for (const file of files) {
+      console.log(`[SCAN_PENDING] filename=${file.originalname}`);
+    }
+
+    const attachments = await Promise.all(
+      files.map((file) =>
+        prisma.attachment.create({
+          data: {
+            grievanceId: id,
+            filename: file.originalname,
+            storagePath: file.path,
+            mimeType: file.mimetype,
+            size: file.size,
+          },
+        })
+      )
+    );
+
+    res.status(200).json({
+      success: true,
+      data: attachments,
+    } as ApiResponse);
+  } catch (err) {
+    next(err);
+  }
 }

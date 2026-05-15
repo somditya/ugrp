@@ -145,7 +145,7 @@ Holidays fetched from `HolidayCalendar` table on every calculation (cached in Re
 - "Edit" link back to each step
 - Declaration checkbox: "I confirm the information provided is accurate"
 - Submit button (disabled until declaration checked)
-- Loading state on submit: spinner, "Submitting your grievance..."
+- Loading state on submit
 
 ### Success Screen
 
@@ -183,68 +183,7 @@ FRONTEND:
 - Step 2: textarea with char counter + drag-drop file upload with preview
 - Step 3: review panel + declaration checkbox + submit
 - Success screen with grievanceId displayed prominently
-- Auto-save to localStorage every 60s; draft banner on return
+- Auto-save to localStorage every 60s; draft restored on return
 - React Hook Form + Zod for client-side validation
 - Fully keyboard accessible
 ```
-
----
-
-## Tests
-
-### Integration — Grievance ID format
-- **What**: Submitted grievance returns ID matching correct pattern
-- **Assert**: `grievanceId` matches regex `/^UGRP-\d{4}-[A-Z]{2,5}-\d{5}$/`
-
-### Integration — SLA deadline calculation
-- **What**: SLA deadline = submission date + slaWorkingDays, skipping weekends
-- **Setup**: Submit on a Friday with 20-day SLA
-- **Assert**: `slaDeadline` is 28 calendar days later (skipping 8 weekend days)
-
-### Unit — Working day calculator
-- **What**: Function skips weekends and public holidays
-- **Cases**:
-  - Friday + 1 business day = Monday
-  - Friday + 5 business days = next Friday
-  - Day before holiday + 1 business day = day after holiday
-- **Assert**: All cases return correct dates
-
-### Integration — Priority flag
-- **What**: Ragging/POSH category submission sets `priorityFlag = CRITICAL`
-- **Setup**: Submit with a category that has `isPriorityCritical = true`
-- **Assert**: `Grievance.priorityFlag === "CRITICAL"` in DB
-
-### Integration — File upload validation
-- **What**: File type and size limits enforced
-- **Assert 1**: Valid PDF upload → 200, attachment record created
-- **Assert 2**: 6th file → 400
-- **Assert 3**: File > 5MB → 413
-- **Assert 4**: `.exe` file → 415
-
-### Integration — Anonymous filing
-- **What**: Anonymous flag stores null complainantId
-- **Request**: Submit with `isAnonymous: true`
-- **Assert**: `Grievance.complainantId === null`; `Grievance.isAnonymous === true`
-
-### E2E — Full form submission
-- **What**: User fills 3-step form and sees success screen
-- **Flow**: Login → /submit-grievance → fill Step 1 → Next → fill Step 2 → Next → Review → Submit
-- **Assert**: Success screen visible; grievanceId displayed in `UGRP-YYYY-XXX-NNNNN` format
-
-### E2E — Draft auto-save
-- **What**: Draft persists across page refresh
-- **Flow**: Fill Step 1 + 2, wait 65 seconds, refresh page
-- **Assert**: Draft banner shown; clicking "Yes" restores form data
-
----
-
-## Acceptance Criteria
-
-- [ ] Grievance ID generated in correct format on every submission
-- [ ] SLA deadline skips weekends and configured holidays
-- [ ] CRITICAL flag set automatically for Ragging and POSH categories
-- [ ] File upload enforces 5-file limit, 5MB per file, allowed types only
-- [ ] Anonymous filing stores null complainantId
-- [ ] 3-step form with auto-save; draft restored on return
-- [ ] Success screen shows grievanceId and SLA deadline
-- [ ] All new grievances routed to Grievance Committee by default

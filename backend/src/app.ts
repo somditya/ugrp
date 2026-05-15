@@ -37,12 +37,12 @@ app.use('/api/', limiter);
 
 // --- Routes ---
 app.use('/api/health', healthRouter);
-app.use('/api/auth', authRouter);
-app.use('/api/grievances', grievanceRouter);
-app.use('/api/departments', departmentRouter);
-app.use('/api/categories', categoryRouter);
-app.use('/api/messages', messageRouter);
-app.use('/api/notifications', notificationRouter);
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/grievances', grievanceRouter);
+app.use('/api/v1/departments', departmentRouter);
+app.use('/api/v1/categories', categoryRouter);
+app.use('/api/v1/messages', messageRouter);
+app.use('/api/v1/notifications', notificationRouter);
 
 // --- Error handling ---
 app.use(notFoundHandler);
